@@ -115,6 +115,7 @@
 	<plugin name="cordova-plugin-inappbrowser" />
 	<plugin name="cordova-plugin-statusbar" />
 	<plugin name="cordova-plugin-whitelist" />
+	<plugin name="cordova-plugin-splashscreen" />
 	<plugin name="cordova-plugin-dialogs" source="npm" />
 	<plugin name="cordova-plugin-password-dialog" source="npm" />
 	<plugin name="cordova-plugin-pin-dialog" source="npm" />
