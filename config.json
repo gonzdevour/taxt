@@ -1,8 +1,8 @@
 ﻿{
-	"id": "com.iegoart.lcs",
+	"id": "com.iegoart.taxt",
 	"version": "1.0.0",
-	"name": "光碼掃描",
-	"description": "將Light Code光碼技術與商業、展演結合，運用光碼掃描App，把資訊導入行動裝置，亦透過互動，呈現不同於傳統的展演及商業模式。智慧商業、智慧導覽、智慧住宅、智慧城市，光碼技術皆可涵蓋其中，發展出無限可能。",
+	"name": "2018桃園科技藝術節",
+	"description": "2018桃園科技藝術節，結合互動多媒體，呈現出日新月異的科技藝術，導入最新光碼技術，讓導覽不再趨於傳統，而是更有科技感，符合此次展覽宗旨。",
 	"author": "playone",
 	"email": "maplelin0919@gmail.com",
 	"website": "http://www.iegoart.com/",
