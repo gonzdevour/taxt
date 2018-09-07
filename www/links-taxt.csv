@@ -1,42 +1,44 @@
-index,id,roomid,roomname,author,subtitle,link,saved
-1,1,2,擁抱吧,林智子,Psyches,https://www.taxt.tw/265192623423376.html,N
-2,2,2,擁抱吧,Kyle McDonald,Sharing Faces,https://www.taxt.tw/kyle.html,N
-3,3,2,擁抱吧,江振維、蔡詠興,Neurons,https://www.taxt.tw/27743253913217312289340813542433288.html,N
-4,4,2,擁抱吧,谷口曉彥,3D大瀏覽器,https://www.taxt.tw/35895214752631324421.html,N
-5,5,2,擁抱吧,劉為開,The Eye of the God,https://www.taxt.tw/211292885838283.html,N
-6,6,2,擁抱吧,鬫凱宇,位元陶計畫,https://www.taxt.tw/397232097723431.html,N
-7,7,4,另一個我,李炳曄,靈魂曝光V.2,https://www.taxt.tw/264462885126308.html,N
-8,8,4,另一個我,藤井直敬、GRINDER-MAN、EVALA,The Mirror,https://www.taxt.tw/the-mirror.html,N
-9,9,4,另一個我,陸揚,電磁腦神教,https://www.taxt.tw/3852025562.html,N
-10,10,4,另一個我,Le Thanh Tung,上童謠,https://www.taxt.tw/le-thanh-tung.html,N
-11,11,4,另一個我,Anida Yoeu Ali,佛陀蟲計畫,https://www.taxt.tw/anida-yoeu-ali.html,N
-12,12,3,虛擬漫遊,鄧悅君,囈語2015,https://www.taxt.tw/371592470921531.html,N
-13,13,4,另一個我,市原悅子,數位薩滿計畫,https://www.taxt.tw/24066214072470923376.html,N
-14,14,3,虛擬漫遊,洪譽豪,游離者,https://www.taxt.tw/279463570935946.html,N
-15,15,3,虛擬漫遊,張瀚謙,墨流,https://www.taxt.tw/243732869835609.html,N
-16,16,3,虛擬漫遊,黃盟欽,網路植物群/聲音根莖,https://www.taxt.tw/406433043127453.html,N
-17,17,3,虛擬漫遊,龍祈澔,當下與過往交融的共時性 2018,https://www.taxt.tw/408453104828564.html,N
-18,18,1,互動體驗區,虹龍數位文創,HTML5動的著色器,https://www.taxt.tw/34425408452597620301.html,N
-19,19,1,互動體驗區,光碼看繪本創新計畫,<刺蝟弟弟>維他命繪本,https://www.taxt.tw/3217320182216293236226412.html,N
-20,20,0,入口,開幕啟動,開幕煙火,http://playoneapps.com.tw/proj/FireworkTaxt/,N
-21,21,0,入口,入口1-1,展覽資訊,https://www.taxt.tw/23637352612083721475.html,N
-22,22,0,入口,入口1-1,抽獎活動,https://docs.google.com/forms/d/1flETxbinyrFraZYnE5y2hZsphMa154CzC-KYtWsgq8c/viewform?edit_requested=true,N
-23,23,0,入口,入口2-1,策展人論述-曾鈺涓,https://www.taxt.tw/31574236373221035542-263663743428051.html,N
-24,24,0,入口,入口2-2,策展人論述-安藤英由樹,https://www.taxt.tw/31574236373221035542-2343334276335213000127193.html,N
-25,25,1,互動體驗區,展區子題1,互動體驗區,https://www.taxt.tw/2011421205396363951121312.html,N
-26,26,2,擁抱吧,展區子題2,擁抱吧,https://www.taxt.tw/257932526521543.html,N
-27,27,3,虛擬漫遊,展區子題3,虛擬漫遊,https://www.taxt.tw/34395258362845936938.html,N
-28,28,4,另一個我,展區子題4,另一個我,https://www.taxt.tw/21478199682049125105.html,N
-29,31,1,互動體驗區,維他命繪本1,維他命繪本動畫橋段1,https://www.youtube.com/watch?v=vLlnWQ58YeA&list=PLWMvP_NbDRrwScm4oIfA3xpmjHKBySDI5,N
-30,32,1,互動體驗區,維他命繪本2,維他命繪本動畫橋段2,https://www.youtube.com/watch?v=q9hPZ2g-rfs&list=PLWMvP_NbDRrwScm4oIfA3xpmjHKBySDI5&index=2,N
-31,33,1,互動體驗區,維他命繪本3,維他命繪本動畫橋段3,https://www.youtube.com/watch?v=-2e-dGygPsU&list=PLWMvP_NbDRrwScm4oIfA3xpmjHKBySDI5&index=3,N
-32,34,1,互動體驗區,維他命繪本4,維他命繪本動畫橋段4,https://www.youtube.com/watch?v=Gb4jUe8qku0&list=PLWMvP_NbDRrwScm4oIfA3xpmjHKBySDI5&index=4,N
-33,35,1,互動體驗區,維他命繪本5,維他命繪本動畫橋段5,https://www.youtube.com/watch?v=HhZe9qbjPWI&index=5&list=PLWMvP_NbDRrwScm4oIfA3xpmjHKBySDI5,N
-34,36,1,互動體驗區,維他命繪本6,維他命繪本動畫橋段6,https://www.youtube.com/watch?v=_yWKWlFayUc&index=6&list=PLWMvP_NbDRrwScm4oIfA3xpmjHKBySDI5,N
-35,37,1,互動體驗區,維他命繪本7,維他命繪本動畫橋段7,https://www.youtube.com/watch?v=8Z2HsXLNy8w&index=7&list=PLWMvP_NbDRrwScm4oIfA3xpmjHKBySDI5,N
-36,41,0,入口,總說牆,總說牆,https://www.taxt.tw/3231735498.html,N
-37,42,null,null,null,null,null,N
-38,43,null,null,null,null,null,N
-39,44,null,null,null,null,null,N
-40,45,null,null,null,null,null,N
-41,50,核銷,核銷,核銷,核銷,null,N
+index,id,roomid,roomname,author,titleid,appindex,subtitle,link,saved
+1,205,2,擁抱吧,林智子,0,0,Psyches,https://www.taxt.tw/265192623423376.html,N
+2,206,2,擁抱吧,Kyle McDonald,1,1,Sharing Faces,https://www.taxt.tw/kyle.html,N
+3,207,2,擁抱吧,江振維、蔡詠興,2,2,Neurons,https://www.taxt.tw/27743253913217312289340813542433288.html,N
+4,208,2,擁抱吧,谷口曉彥,3,3,3D大瀏覽器,https://www.taxt.tw/35895214752631324421.html,N
+5,209,2,擁抱吧,劉為開,4,4,The Eye of the God,https://www.taxt.tw/211292885838283.html,N
+6,210,2,擁抱吧,鬫凱宇,5,5,位元陶計畫,https://www.taxt.tw/397232097723431.html,N
+7,211,4,另一個我,李炳曄,6,6,靈魂曝光V.2,https://www.taxt.tw/264462885126308.html,N
+8,212,4,另一個我,藤井直敬、GRINDER-MAN、EVALA,7,7,The Mirror,https://www.taxt.tw/the-mirror.html,N
+9,213,4,另一個我,陸揚,8,8,電磁腦神教,https://www.taxt.tw/3852025562.html,N
+10,214,4,另一個我,Le Thanh Tung,9,9,上童謠,https://www.taxt.tw/le-thanh-tung.html,N
+11,215,4,另一個我,Anida Yoeu Ali,10,10,佛陀蟲計畫,https://www.taxt.tw/anida-yoeu-ali.html,N
+12,216,3,虛擬漫遊,鄧悅君,11,11,囈語2015,https://www.taxt.tw/371592470921531.html,N
+13,217,4,另一個我,市原悅子,12,12,數位薩滿計畫,https://www.taxt.tw/24066214072470923376.html,N
+14,218,3,虛擬漫遊,洪譽豪,13,13,游離者,https://www.taxt.tw/279463570935946.html,N
+15,219,3,虛擬漫遊,張瀚謙,14,14,墨流,https://www.taxt.tw/243732869835609.html,N
+16,220,3,虛擬漫遊,黃盟欽,15,15,網路植物群/聲音根莖,https://www.taxt.tw/406433043127453.html,N
+17,221,3,虛擬漫遊,龍祈澔,16,16,當下與過往交融的共時性 2018,https://www.taxt.tw/408453104828564.html,N
+18,222,1,互動體驗區,虹龍數位文創,17,17,HTML5動的著色器,https://www.taxt.tw/34425408452597620301.html,N
+19,223,1,互動體驗區,光碼看繪本創新計畫,18,18,<刺蝟弟弟>維他命繪本,https://www.taxt.tw/3217320182216293236226412.html,N
+20,224,1,互動體驗區,祥儀機器人,19,19,科技酬神戲,https://www.taxt.tw/3107720736272312212020154.html,N
+21,225,0,入口,開幕啟動,null,null,開幕煙火,http://playoneapps.com.tw/proj/FireworkTaxt/,N
+22,226,0,入口,入口1-1,20,20,展覽資訊,https://www.taxt.tw/23637352612083721475.html,N
+23,227,0,入口,入口1-1,21,21,表演及活動資訊,https://www.taxt.tw/25512242912796321205.html,N
+24,228,0,入口,入口2-1,22,22,策展論述-林羽婕,https://www.taxt.tw/31574236373221035542-265193270123125.html,N
+25,229,0,入口,入口2-2,23,23,策展人論述-曾鈺涓,https://www.taxt.tw/31574236373221035542-263663743428051.html,N
+26,230,0,入口,入口2-3,24,24,策展人論述-安藤英由樹,https://www.taxt.tw/31574236373221035542-2343334276335213000127193.html,N
+27,231,1,互動體驗區,展區子題1,25,25,互動體驗區,https://www.taxt.tw/2011421205396363951121312.html,N
+28,232,2,擁抱吧,展區子題2,26,26,擁抱吧,https://www.taxt.tw/257932526521543.html,N
+29,233,3,虛擬漫遊,展區子題3,27,27,虛擬漫遊,https://www.taxt.tw/34395258362845936938.html,N
+30,234,4,另一個我,展區子題4,28,28,另一個我,https://www.taxt.tw/21478199682049125105.html,N
+31,235,1,互動體驗區,<刺蝟弟弟>維他命繪本1,18,null,維他命繪本動畫橋段1,https://www.youtube.com/watch?v=vLlnWQ58YeA&list=PLWMvP_NbDRrwScm4oIfA3xpmjHKBySDI5,N
+32,236,1,互動體驗區,<刺蝟弟弟>維他命繪本2,18,null,維他命繪本動畫橋段2,https://www.youtube.com/watch?v=q9hPZ2g-rfs&list=PLWMvP_NbDRrwScm4oIfA3xpmjHKBySDI5&index=2,N
+33,237,1,互動體驗區,<刺蝟弟弟>維他命繪本3,18,null,維他命繪本動畫橋段3,https://www.youtube.com/watch?v=-2e-dGygPsU&list=PLWMvP_NbDRrwScm4oIfA3xpmjHKBySDI5&index=3,N
+34,238,1,互動體驗區,<刺蝟弟弟>維他命繪本4,18,null,維他命繪本動畫橋段4,https://www.youtube.com/watch?v=Gb4jUe8qku0&index=4&list=PLWMvP_NbDRrwScm4oIfA3xpmjHKBySDI5,N
+35,239,1,互動體驗區,<刺蝟弟弟>維他命繪本5,18,null,維他命繪本動畫橋段5,https://www.youtube.com/watch?v=HhZe9qbjPWI&index=5&list=PLWMvP_NbDRrwScm4oIfA3xpmjHKBySDI5,N
+36,240,1,互動體驗區,<刺蝟弟弟>維他命繪本6,18,null,維他命繪本動畫橋段6,https://www.youtube.com/watch?v=_yWKWlFayUc&list=PLWMvP_NbDRrwScm4oIfA3xpmjHKBySDI5&index=6,N
+37,241,1,互動體驗區,<刺蝟弟弟>維他命繪本7,18,null,維他命繪本動畫橋段7,https://www.youtube.com/watch?v=8Z2HsXLNy8w&list=PLWMvP_NbDRrwScm4oIfA3xpmjHKBySDI5&index=7,N
+38,242,0,入口,總說牆,null,null,網站首頁,https://www.taxt.tw/,N
+39,243,null,null,null,null,null,null,null,N
+40,244,null,null,null,null,null,null,null,N
+41,245,null,null,null,null,null,null,null,N
+42,246,null,null,null,null,null,null,null,N
+43,247,核銷,核銷,核銷,null,null,null,null,N
