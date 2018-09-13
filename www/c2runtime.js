@@ -16862,6 +16862,916 @@ cr.plugins_.NinePatch = function(runtime)
 }());
 ;
 ;
+cr.plugins_.Rex_CSV = function(runtime)
+{
+	this.runtime = runtime;
+};
+(function ()
+{
+	var pluginProto = cr.plugins_.Rex_CSV.prototype;
+	pluginProto.Type = function(plugin)
+	{
+		this.plugin = plugin;
+		this.runtime = plugin.runtime;
+	};
+	var typeProto = pluginProto.Type.prototype;
+	typeProto.onCreate = function()
+	{
+	};
+	pluginProto.Instance = function(type)
+	{
+		this.type = type;
+		this.runtime = type.runtime;
+	};
+	var instanceProto = pluginProto.Instance.prototype;
+	instanceProto.onCreate = function()
+	{
+	    this.isInPreview = (typeof cr_is_preview !== "undefined");
+        this.strDelimiter = this.properties[0];
+        this.isEvalMode = (this.properties[1] == 1);
+        this.tables = {};
+        this.currentPageName = null;
+        this.currentTable = null;
+        this.forPage = "";
+        this.atCol = "";
+        this.atRow = "";
+        this.atPage = "";
+        this.TurnPage("_");
+        this.checkName = "CSV";
+	};
+	instanceProto.getValue = function(v)
+	{
+	    if (v == null)
+	        v = 0;
+	    else if (this.isEvalMode)
+	        v = eval("("+v+")");
+        return v;
+	};
+	instanceProto.HasPage = function(page)
+	{
+	    return (this.tables[page] != null);
+	};
+	instanceProto.TurnPage = function(page)
+	{
+        if (this.currentPageName === page)
+            return;
+        if (!this.HasPage(page))
+        {
+            this.tables[page] = new cr.plugins_.Rex_CSV.CSVKlass(this);
+        }
+        this.currentPageName = page;
+        this.currentTable = this.tables[page];
+	};
+	instanceProto.Get = function (col, row, page)
+	{
+        this.atCol = col;
+        this.atRow = row;
+        if (page != null)
+        {
+            this.TurnPage(page);
+        }
+        this.atPage = this.currentPageName;
+        return this.currentTable.At(col,row);
+	};
+	instanceProto.Set = function (value, col, row, page)
+	{
+        this.atCol = col;
+        this.atRow = row;
+        if (page != null)
+        {
+            this.TurnPage(page);
+        }
+        this.atPage = this.currentPageName;
+        this.currentTable.SetCell(col, row, value);
+	};
+	instanceProto.GetColCnt = function (page)
+	{
+        if (page != null)
+        {
+            this.TurnPage(page);
+        }
+        this.atPage = this.currentPageName;
+        return this.currentTable.GetColCnt();
+	};
+	instanceProto.GetRowCnt = function (page)
+	{
+        if (page != null)
+        {
+            this.TurnPage(page);
+        }
+        this.atPage = this.currentPageName;
+        return this.currentTable.GetRowCnt();
+	};
+	instanceProto.TableToString = function (page)
+	{
+        if (page != null)
+        {
+            this.TurnPage(page);
+        }
+        return this.currentTable.ToString();
+	};
+	instanceProto.saveToJSON = function ()
+	{
+	    var page, tables={};
+	    for (page in this.tables)
+        {
+            this.TurnPage(page);
+	        tables[page] = {"d":this.currentTable.table,
+			                "k":this.currentTable.keys,
+							"i":this.currentTable.items}
+		}
+		return { "d": tables,
+                      "delimiter": this.strDelimiter,
+                   };
+	};
+	instanceProto.loadFromJSON = function (o)
+	{
+	    var tables = o["d"], table;
+		var page;
+		for (page in tables)
+		{
+		    this.TurnPage(page);
+		    table = tables[page];
+			this.currentTable.table = table["d"];
+			this.currentTable.keys = table["k"];
+			this.currentTable.items = table["i"];
+		}
+        this.strDelimiter = o["delimiter"];
+	};
+	function Cnds() {};
+	pluginProto.cnds = new Cnds();
+	Cnds.prototype.ForEachCol = function ()
+	{
+        this.currentTable.ForEachCol();
+		return false;
+	};
+	Cnds.prototype.ForEachRowInCol = function (col)
+	{
+        this.currentTable.ForEachRowInCol(col);
+		return false;
+	};
+	Cnds.prototype.ForEachPage = function ()
+	{
+        var current_frame = this.runtime.getCurrentEventStack();
+        var current_event = current_frame.current_event;
+		var solModifierAfterCnds = current_frame.isModifierAfterCnds();
+		this.forPage = "";
+        var tables = this.tables;
+        var page;
+		for (page in tables)
+	    {
+		    if (solModifierAfterCnds)
+                this.runtime.pushCopySol(current_event.solModifiers);
+            this.forPage = page;
+            this.TurnPage(page);
+		    current_event.retrigger();
+            if (solModifierAfterCnds)
+		        this.runtime.popSol(current_event.solModifiers);
+		}
+		this.forPage = "";
+		return false;
+	};
+	Cnds.prototype.ForEachRow = function ()
+	{
+        this.currentTable.ForEachRow();
+		return false;
+	};
+	Cnds.prototype.ForEachColInRow = function (row)
+	{
+        this.currentTable.ForEachColInRow(row);
+		return false;
+	};
+	Cnds.prototype.IsDataInCol = function (data, col_name)
+	{
+		if (!(this.currentTable.keys.indexOf(col_name) != (-1)))
+		    return false;
+	    var table = this.currentTable.table;
+	    var col_data = table[col_name], row_name;
+		var matched = false;
+		for (row_name in col_data)
+		{
+		    if (col_data[row_name] == data)
+			{
+			    matched = true;
+				break;
+			}
+		}
+		return matched;
+	};
+	Cnds.prototype.IsDataInRow = function (data, row_name)
+	{
+		if (!(this.currentTable.items.indexOf(row_name) != (-1)))
+		    return false;
+	    var table = this.currentTable.table;
+	    var col_name;
+		var matched = false;
+		for (col_name in table)
+		{
+		    if (table[col_name][row_name] == data)
+			{
+			    matched = true;
+				break;
+			}
+		}
+		return matched;
+	};
+	Cnds.prototype.IsKeyInCol = function (key)
+	{
+        return (this.currentTable.keys.indexOf(key) != (-1));
+	};
+	Cnds.prototype.IsKeyInRow = function (key)
+	{
+        return (this.currentTable.items.indexOf(key) != (-1));
+	};
+	Cnds.prototype.IsCellValid = function (col, row)
+	{
+        return ((this.currentTable.keys.indexOf(col) != (-1)) &&
+                (this.currentTable.items.indexOf(row) != (-1))   );
+	};
+	Cnds.prototype.HasCol = function (col)
+	{
+        return (this.currentTable.keys.indexOf(col) != (-1));
+	};
+	Cnds.prototype.HasRow = function (row)
+	{
+        return (this.currentTable.items.indexOf(row) != (-1));
+	};
+	function Acts() {};
+	pluginProto.acts = new Acts();
+	Acts.prototype.LoadCSV = function (csv_string)
+	{
+        this.currentTable._parsing(csv_string);
+	};
+	Acts.prototype.SetCell = function (col, row, val)
+	{
+        this.currentTable.SetCell(col, row, val);
+	};
+	Acts.prototype.Clear = function ()
+	{
+		 this.currentTable.Clear();
+	};
+	Acts.prototype.ConvertRow = function (row, to_type)
+	{
+         this.currentTable.ConvertRow(row, to_type);
+	};
+	Acts.prototype.TurnPage = function (page)
+	{
+         this.TurnPage(page);
+	};
+	Acts.prototype.StringToPage = function (JSON_string)
+	{
+        this.currentTable.JSONString2Page(JSON_string);
+	};
+	Acts.prototype.StringToPage = function (JSON_string)
+	{
+        this.currentTable.JSONString2Page(JSON_string);
+	};
+	Acts.prototype.AppendCol = function (col, init_value)
+	{
+        this.currentTable.AppendCol(col, init_value);
+	};
+	Acts.prototype.AppendRow = function (row, init_value)
+	{
+        this.currentTable.AppendRow(row, init_value);
+	};
+	Acts.prototype.RemoveCol = function (col)
+	{
+        if (typeof (col) === "number")
+        {
+            var cols = this.currentTable.keys;
+            col = cols[col];
+        }
+        this.currentTable.RemoveCol(col);
+	};
+	Acts.prototype.RemoveRow = function (row)
+	{
+        if (typeof (row) === "number")
+        {
+            var rows = this.currentTable.items;
+            row = rows[row];
+        }
+        this.currentTable.RemoveRow(row);
+	};
+	Acts.prototype.SetDelimiter = function (s)
+	{
+        this.strDelimiter = s;
+	};
+	Acts.prototype.StringToAllTables = function (JSON_string)
+	{
+	    var page;
+	    var tables=JSON.parse(JSON_string);
+	    for (page in tables)
+	    {
+	        this.TurnPage(page);
+	        this.currentTable.JSONString2Page(tables[page]);
+	    }
+	};
+	Acts.prototype.SortCol = function (col, is_increasing)
+	{
+        this.currentTable.SortCol(col, is_increasing);
+	};
+	Acts.prototype.SortRow = function (row, is_increasing)
+	{
+        this.currentTable.SortRow(row, is_increasing);
+	};
+	Acts.prototype.SetCellAtPage = function (col, row, page, val)
+	{
+        this.TurnPage(page);
+        this.currentTable.SetCell(col, row, val);
+	};
+	Acts.prototype.AddToCell = function (col, row, val)
+	{
+        var value = this.Get(col, row) || 0;
+        this.currentTable.SetCell(col, row, value + val);
+	};
+	Acts.prototype.AddToCellAtPage = function (col, row, page, val)
+	{
+        var value = this.Get(col, row, page) || 0;
+        this.TurnPage(page);
+        this.currentTable.SetCell(col, row, value + val);
+	};
+	Acts.prototype.ConvertCol = function (col, to_type)
+	{
+         this.currentTable.ConvertCol(col, to_type);
+	};
+	function Exps() {};
+	pluginProto.exps = new Exps();
+	Exps.prototype.At = function (ret, col, row, page, default_value)
+	{
+        if (page != null)
+            this.TurnPage(page);
+        if (typeof (col) === "number")
+        {
+            var cols = this.currentTable.keys;
+            col = cols[col];
+        }
+        if (typeof (row) === "number")
+        {
+            var rows = this.currentTable.items;
+            row = rows[row];
+        }
+        var value = this.Get(col, row, page);
+        if (value == null)
+            value = (default_value == null)? 0 : default_value;
+        ret.set_any(value);
+	};
+	Exps.prototype.CurCol = function (ret)
+	{
+		ret.set_string(this.currentTable.forCol);
+	};
+	Exps.prototype.CurRow = function (ret)
+	{
+		ret.set_string(this.currentTable.forRow);
+	};
+	Exps.prototype.CurValue = function (ret)
+	{
+		ret.set_any(this.currentTable.At( this.currentTable.forCol, this.currentTable.forRow ));
+	};
+	Exps.prototype.AtCol = function (ret)
+	{
+		ret.set_string(this.atCol);
+	};
+	Exps.prototype.AtRow = function (ret)
+	{
+		ret.set_string(this.atRow);
+	};
+	Exps.prototype.AtPage = function (ret)
+	{
+		ret.set_string(this.atPage);
+	};
+	Exps.prototype.CurPage = function (ret)
+	{
+		ret.set_string(this.forPage);
+	};
+	Exps.prototype.TableToString = function (ret, page)
+	{
+		ret.set_string(this.TableToString(page));
+	};
+	Exps.prototype.ColCnt = function (ret, page)
+	{
+		ret.set_int(this.GetColCnt(page));
+	};
+	Exps.prototype.RowCnt = function (ret, page)
+	{
+		ret.set_int(this.GetRowCnt(page));
+	};
+	Exps.prototype.Delimiter = function (ret)
+	{
+		ret.set_string(this.strDelimiter);
+	};
+	Exps.prototype.AllTalbesToString = function (ret)
+	{
+	    var page, table2string={};
+	    for (page in this.tables)
+	        table2string[page] = this.TableToString(page);
+		ret.set_string(JSON.stringify(table2string));
+	};
+	Exps.prototype.TableToCSV = function (ret)
+	{
+		ret.set_string(this.currentTable.ToCSVString());
+	};
+	Exps.prototype.NextCol = function (ret, col)
+	{
+        if (col == null)
+            col = this.atCol;
+        var cols = this.currentTable.keys;
+        var idx = cols.indexOf(col);
+        var next_col;
+        if (idx !== -1)
+            next_col = cols[idx+1];
+		ret.set_string(next_col || "");
+	};
+	Exps.prototype.PreviousCol = function (ret, col)
+	{
+        if (col == null)
+            col = this.atCol;
+        var cols = this.currentTable.keys;
+        var idx = cols.indexOf(col);
+        var next_col;
+        if (idx !== -1)
+            next_col = cols[idx-1];
+		ret.set_string(next_col || "");
+	};
+	Exps.prototype.NextRow = function (ret, row)
+	{
+        if (row == null)
+            row = this.atRow;
+        var rows = this.currentTable.items;
+        var idx = rows.indexOf(row);
+        var next_row;
+        if (idx !== -1)
+            next_row = rows[idx+1];
+		ret.set_string(next_row || "");
+	};
+	Exps.prototype.PreviousRow = function (ret, row)
+	{
+        if (row == null)
+            row = this.atRow;
+        var rows = this.currentTable.items;
+        var idx = rows.indexOf(row);
+        var next_row;
+        if (idx !== -1)
+            next_row = rows[idx-1];
+		ret.set_string(next_row || "");
+	};
+}());
+(function ()
+{
+    cr.plugins_.Rex_CSV.CSVKlass = function(plugin)
+    {
+        this.plugin = plugin;
+		this.table = {};
+        this.keys = [];    // col name
+        this.items = [];   // row name
+        this.forCol = "";
+        this.forRow = "";
+    };
+    var CSVKlassProto = cr.plugins_.Rex_CSV.CSVKlass.prototype;
+	CSVKlassProto.Clear = function()
+	{
+        var key;
+        for (key in this.table)
+            delete this.table[key];
+        this.keys.length = 0;
+        this.items.length = 0;
+	};
+	CSVKlassProto.ToString = function()
+	{
+        var save_data = {"table":this.table,
+                         "keys":this.keys,
+                         "items":this.items};
+		return JSON.stringify(save_data);
+	};
+	CSVKlassProto.JSONString2Page = function(JSON_string)
+	{
+        var save_data = JSON.parse(JSON_string);
+        try
+        {
+	        this.table = save_data["table"];
+            this.keys = save_data["keys"];
+            this.items = save_data["items"];
+        }
+        catch(err)  // compatible with older version
+        {
+            this.table = save_data;
+        }
+	};
+    CSVKlassProto._create_keys = function()
+	{
+        var keys = this.keys;
+        var key_cnt = this.keys.length;
+        var i, key;
+        for (i=0; i<key_cnt; i++)
+        {
+            key = keys[i];
+            if (this.table[key] == null)
+                this.table[key] = {};
+        }
+	};
+    CSVKlassProto._create_items = function(values)
+	{
+        var item_name = values.shift();
+        var keys = this.keys;
+        var key_cnt = this.keys.length;
+        var table = this.table;
+        var i, v;
+        for (i=0; i<key_cnt; i++)
+        {
+            v = this.plugin.getValue(values[i]);
+            table[keys[i]][item_name] = v;
+        }
+        this.items.push(item_name);
+	};
+	CSVKlassProto._parsing = function(csv_string)
+	{
+        if (csv_string == "")
+            return;
+        var read_array = CSVToArray(csv_string, this.plugin.strDelimiter);
+        this.keys = read_array.shift();
+        this._create_keys();
+        var item_cnt = read_array.length;
+        var i;
+        for (i=0; i<item_cnt; i++)
+        {
+            this._create_items(read_array[i]);
+        }
+	};
+    CSVKlassProto.At = function(col, row)
+	{
+	    var cell;
+	    cell = this.table[col];
+	    if (cell == null)
+        {
+;
+	        return null;
+        }
+	    cell = cell[row];
+	    if (cell == null)
+        {
+;
+	        return null;
+        }
+        return cell;
+	};
+	CSVKlassProto.SetCell = function (col, row, val)
+	{
+	    var cell;
+	    cell = this.table[col];
+	    if (cell == null)
+        {
+;
+	        return;
+        }
+	    cell = cell[row];
+	    if (cell == null)
+        {
+;
+	        return;
+        }
+        this.table[col][row] = val;
+	};
+	CSVKlassProto.ConvertCol = function (col, to_type)
+	{
+        var handler = (to_type==0)? parseInt:
+                                    parseFloat;
+        var items = this.items;
+        var item_cnt = items.length;
+        var table = this.table;
+        var i, val;
+        for (i=0; i<item_cnt; i++)
+        {
+            val = table[col][items[i]];
+            table[col][items[i]] = handler(val);
+        }
+	};
+	CSVKlassProto.ConvertRow = function (row, to_type)
+	{
+        var handler = (to_type==0)? parseInt:
+                                    parseFloat;
+        var keys = this.keys;
+        var key_cnt = keys.length;
+        var table = this.table;
+        var i, val;
+        for (i=0; i<key_cnt; i++)
+        {
+            val = table[keys[i]][row];
+            table[keys[i]][row] = handler(val);
+        }
+	};
+	CSVKlassProto.AppendCol = function (col, init_value)
+	{
+        if (this.keys.indexOf(col) != (-1))
+            return;
+        var has_ref = false;
+        if (this.keys.length > 0)
+        {
+            var ref_col = this.table[this.keys[0]];
+            has_ref = true;
+        }
+        var col_data = {};
+        var items = this.items;
+        var item_cnt = items.length;
+        var i;
+        for (i=0; i<item_cnt; i++)
+        {
+            if (has_ref)
+            {
+                if (typeof ref_col[items[i]] == "number")
+                    col_data[items[i]] = 0;
+                else
+                     col_data[items[i]] = "";
+            }
+            else
+                col_data[items[i]] = init_value;
+        }
+        this.table[col] = col_data;
+        this.keys.push(col);
+	};
+	CSVKlassProto.AppendRow = function (row, init_value)
+	{
+        if (this.items.indexOf(row) != (-1))
+            return;
+        var keys = this.keys;
+        var key_cnt = keys.length;
+        var table = this.table;
+        var i;
+        for (i=0; i<key_cnt; i++)
+        {
+            table[keys[i]][row] = init_value;
+        }
+        this.items.push(row);
+	};
+	CSVKlassProto.RemoveCol = function (col)
+	{
+        var col_index = this.keys.indexOf(col);
+        if (col_index == (-1))
+            return;
+        delete this.table[col];
+        this.keys.splice(col_index, 1);
+	};
+	CSVKlassProto.RemoveRow = function (row)
+	{
+        var row_index = this.items.indexOf(row);
+        if (row_index == (-1))
+            return;
+        var keys = this.keys;
+        var key_cnt = keys.length;
+        var table = this.table;
+        var i;
+        for (i=0; i<key_cnt; i++)
+        {
+            delete table[keys[i]][row];
+        }
+        this.items.splice(row_index, 1);
+	};
+	CSVKlassProto.ForEachCol = function ()
+	{
+        var current_frame = this.plugin.runtime.getCurrentEventStack();
+        var current_event = current_frame.current_event;
+		var solModifierAfterCnds = current_frame.isModifierAfterCnds();
+		this.forCol = "";
+        var keys = this.keys;
+        var key_cnt = keys.length;
+        var i;
+		for (i=0; i<key_cnt; i++ )
+	    {
+            if (solModifierAfterCnds)
+		        this.plugin.runtime.pushCopySol(current_event.solModifiers);
+            this.forCol = keys[i];
+		    current_event.retrigger();
+            if (solModifierAfterCnds)
+		    	this.plugin.runtime.popSol(current_event.solModifiers);
+		}
+		this.forCol = "";
+	};
+	CSVKlassProto.ForEachRowInCol = function (col)
+	{
+        var has_col_index = (this.keys.indexOf(col)!=(-1));
+        if (!has_col_index)
+        {
+;
+            return;
+        }
+        this.forCol = col;
+        var current_frame = this.plugin.runtime.getCurrentEventStack();
+        var current_event = current_frame.current_event;
+		var solModifierAfterCnds = current_frame.isModifierAfterCnds();
+		this.forRow = "";
+        var items = this.items;
+        var item_cnt = items.length;
+        var i;
+		for (i=0; i<item_cnt; i++ )
+	    {
+            if (solModifierAfterCnds)
+		        this.plugin.runtime.pushCopySol(current_event.solModifiers);
+            this.forRow = items[i];
+		    current_event.retrigger();
+            if (solModifierAfterCnds)
+		    	this.plugin.runtime.popSol(current_event.solModifiers);
+		}
+		this.forRow = "";
+	};
+	CSVKlassProto.ForEachRow = function ()
+	{
+        var current_frame = this.plugin.runtime.getCurrentEventStack();
+        var current_event = current_frame.current_event;
+		var solModifierAfterCnds = current_frame.isModifierAfterCnds();
+		this.forRow = "";
+        var items = this.items;
+        var item_cnt = items.length;
+        var i;
+		for (i=0; i<item_cnt; i++ )
+	    {
+            if (solModifierAfterCnds)
+		        this.plugin.runtime.pushCopySol(current_event.solModifiers);
+            this.forRow = items[i];
+		    current_event.retrigger();
+            if (solModifierAfterCnds)
+		    	this.plugin.runtime.popSol(current_event.solModifiers);
+	   }
+		this.forRow = "";
+	};
+	CSVKlassProto.ForEachColInRow = function (row)
+	{
+        var has_row_index = (this.items.indexOf(row)!=(-1));
+        if (!has_row_index)
+        {
+;
+            return;
+        }
+        this.forRow = row;
+        var current_frame = this.plugin.runtime.getCurrentEventStack();
+        var current_event = current_frame.current_event;
+		var solModifierAfterCnds = current_frame.isModifierAfterCnds();
+		this.forCol = "";
+        var keys = this.keys;
+        var key_cnt = keys.length;
+        var i;
+		for (i=0; i<key_cnt; i++ )
+	    {
+            if (solModifierAfterCnds)
+		        this.plugin.runtime.pushCopySol(current_event.solModifiers);
+		    this.forCol = keys[i];
+		    current_event.retrigger();
+            if (solModifierAfterCnds)
+		    	this.plugin.runtime.popSol(current_event.solModifiers);
+		}
+		this.forCol = "";
+	};
+    CSVKlassProto.GetColCnt = function()
+    {
+        return this.keys.length;
+    };
+    CSVKlassProto.GetRowCnt = function()
+    {
+        return this.items.length;
+    };
+    var _row_sort = function(col0, col1)
+    {
+        var item0 = _sort_table[col0][_sort_row_name];
+        var item1 = _sort_table[col1][_sort_row_name];
+        return (item0 > item1) ? (_sort_is_increasing? 1:-1):
+               (item0 < item1) ? (_sort_is_increasing? -1:1):
+                                 0;
+    };
+    CSVKlassProto.SortCol = function (col, sortMode_)  // 0=a, 1=d, 2=la, 3=ld
+    {
+        var has_col_index = (this.keys.indexOf(col)!=(-1));
+        if (!has_col_index)
+        {
+;
+            return;
+        }
+        var self=this;
+        var sortFn = function (row0, row1)
+        {
+            var sortMode = sortMode_;
+            var v0 =  self.table[col][row0];
+            var v1 =  self.table[col][row1];
+            if (sortMode > 1)  // 2=la, 3=ld
+            {
+                v0 = parseFloat(v0);
+                v1 = parseFloat(v1);
+                sortMode -= 2;
+            }
+            return (v0 > v1) ? (sortMode? -1:1):
+                       (v0 < v1) ? (sortMode? 1:-1):
+                                         0;
+        }
+        this.items.sort(sortFn);
+    };
+    CSVKlassProto.SortRow = function (row, sortMode_)
+    {
+        var has_row_index = (this.items.indexOf(row)!=(-1));
+        if (!has_row_index)
+        {
+;
+            return;
+        }
+        var self=this;
+        var sortFn = function (col0, col1)
+        {
+            var sortMode = sortMode_;
+            var v0 = self.table[col0][row];
+            var v1 = self.table[col1][row];
+            if (sortMode > 1)  // 2=la, 3=ld
+            {
+                v0 = parseFloat(v0);
+                v1 = parseFloat(v1);
+                sortMode -= 2;
+            }
+            return (v0 > v1) ? (sortMode? -1:1):
+                   (v0 < v1) ? (sortMode? 1:-1):
+                                         0;
+        }
+        this.keys.sort(sortFn);
+    };
+    var dump_lines = [];
+    CSVKlassProto.ToCSVString = function ()
+    {
+        var strDelimiter = this.plugin.strDelimiter;
+        var isEvalMode = this.plugin.isEvalMode;
+        var l = "";
+        var k, kcnt = this.keys.length;
+        for (k=0; k<kcnt; k++)
+        {
+            l += (strDelimiter + cell_string_get(this.keys[k], false, strDelimiter));
+        }
+        dump_lines.push(l);
+        var i, icnt = this.items.length;
+        for (i=0; i<icnt; i++)
+        {
+            l = cell_string_get(this.items[i], false, strDelimiter);
+            for (k=0; k<kcnt; k++)
+            {
+                l += (strDelimiter + cell_string_get(this.table[this.keys[k]][this.items[i]], isEvalMode, strDelimiter));
+            }
+            dump_lines.push(l);
+        }
+        var csvString = dump_lines.join("\n");
+        dump_lines.length = 0;
+        return csvString;
+    };
+    var cell_string_get = function (value_, isEvalMode, strDelimiter)
+    {
+        if (typeof(value_) == "number")
+            value_ = value_.toString();
+        else
+        {
+            if (isEvalMode)
+                value_ = '"' + value_ + '"';
+            if (strDelimiter == null)
+                strDelimiter = ",";
+            var need_add_quotes = (value_.indexOf(strDelimiter) != (-1)) ||
+                                  (value_.indexOf("\n") != (-1));
+            if (value_.indexOf('"') != (-1))
+            {
+                var re = new RegExp('"', 'g');
+                value_ = value_.replace(re, '""');
+                need_add_quotes = true;
+            }
+            if ( need_add_quotes)
+            {
+                value_ = '"' + value_ + '"';
+            }
+        }
+        return value_;
+    };
+    var CSVToArray = function ( strData, strDelimiter ){
+        strDelimiter = (strDelimiter || ",");
+        var objPattern = new RegExp(
+                (
+                        "(\\" + strDelimiter + "|\\r?\\n|\\r|^)" +
+                        "(?:\"([^\"]*(?:\"\"[^\"]*)*)\"|" +
+                        "([^\"\\" + strDelimiter + "\\r\\n]*))"
+                ),
+                "gi"
+                );
+        var arrData = [[]];
+        var arrMatches = null;
+        while (arrMatches = objPattern.exec( strData )){
+                var strMatchedDelimiter = arrMatches[ 1 ];
+                if (
+                        strMatchedDelimiter.length &&
+                        (strMatchedDelimiter != strDelimiter)
+                        ){
+                        arrData.push( [] );
+                }
+                if (arrMatches[ 2 ]){
+                        var strMatchedValue = arrMatches[ 2 ].replace(
+                                new RegExp( "\"\"", "g" ),
+                                "\""
+                                );
+                } else {
+                        var strMatchedValue = arrMatches[ 3 ];
+                }
+                arrData[ arrData.length - 1 ].push( strMatchedValue );
+        }
+        return( arrData );
+    };
+}());
+;
+;
 cr.plugins_.Rex_Comment = function(runtime)
 {
 	this.runtime = runtime;
@@ -17279,6 +18189,187 @@ cr.plugins_.Rex_Container.tag2container = {};
 	};
 	Exps.prototype.ImagePointY = function (ret, imgpt) {
 		ret.set_float(0);
+	};
+}());
+;
+;
+cr.plugins_.Rex_Date = function(runtime)
+{
+	this.runtime = runtime;
+};
+(function ()
+{
+	var pluginProto = cr.plugins_.Rex_Date.prototype;
+	pluginProto.Type = function(plugin)
+	{
+		this.plugin = plugin;
+		this.runtime = plugin.runtime;
+	};
+	var typeProto = pluginProto.Type.prototype;
+	typeProto.onCreate = function()
+	{
+	};
+	pluginProto.Instance = function(type)
+	{
+		this.type = type;
+		this.runtime = type.runtime;
+	};
+	var instanceProto = pluginProto.Instance.prototype;
+	instanceProto.onCreate = function()
+	{
+	    this.timers = {};
+        /*
+        {
+            "state":1=run, 0=paused
+            "start": timstamp, updated when resumed
+            "acc": delta-time, updated when paused
+        }
+        */
+	};
+    var startTimer = function(timer, curTimestamp)
+    {
+        if (!timer)
+            timer = {};
+        if (!curTimestamp)
+            curTimestamp = (new Date()).getTime();
+        timer["state"] = 1;
+        timer["start"] = curTimestamp;
+        timer["acc"] = 0;
+        return timer;
+    };
+    var getElapsedTime = function(timer)
+    {
+        if (!timer)
+            return 0;
+        var deltaTime = timer["acc"];
+        if (timer["state"] === 1)
+        {
+            var curTime = (new Date()).getTime();
+            deltaTime += (curTime - timer["start"]);
+        }
+        return deltaTime;
+    };
+    var pauseTimer = function(timer)
+    {
+        if ((!timer) || (timer["state"] === 0))
+            return;
+        timer["state"] = 0;
+        var curTime = (new Date()).getTime();
+        timer["acc"] += (curTime - timer["start"]);
+    };
+    var resumeTimer = function(timer)
+    {
+        if ((!timer) || (timer["state"] === 1))
+            return;
+        timer["state"] = 1;
+        timer["start"] = (new Date()).getTime();
+    };
+	var getDate = function (timestamp)
+	{
+		return (timestamp != null)? new Date(timestamp): new Date();
+	};
+    instanceProto.saveToJSON = function ()
+	{
+		return { "tims": this.timers,
+                };
+	};
+	instanceProto.loadFromJSON = function (o)
+	{
+		this.timers = o["tims"];
+	};
+	function Cnds() {};
+	pluginProto.cnds = new Cnds();
+	function Acts() {};
+	pluginProto.acts = new Acts();
+	Acts.prototype.StartTimer = function (name)
+	{
+        this.timers[name] = startTimer(this.timers[name]);
+	};
+	Acts.prototype.PauseTimer = function (name)
+	{
+        pauseTimer(this.timers[name]);
+	};
+	Acts.prototype.ResumeTimer = function (name)
+	{
+        resumeTimer(this.timers[name]);
+	};
+	function Exps() {};
+	pluginProto.exps = new Exps();
+	Exps.prototype.Year = function (ret, timestamp)
+	{
+		ret.set_int(getDate(timestamp).getFullYear());
+	};
+	Exps.prototype.Month = function (ret, timestamp)
+	{
+	    ret.set_int(getDate(timestamp).getMonth()+1);
+	};
+	Exps.prototype.Date = function (ret, timestamp)
+	{
+	    ret.set_int(getDate(timestamp).getDate());
+	};
+	Exps.prototype.Day = function (ret, timestamp)
+	{
+	    ret.set_int(getDate(timestamp).getDay());
+	};
+	Exps.prototype.Hours = function (ret, timestamp)
+	{
+	    ret.set_int(getDate(timestamp).getHours());
+	};
+	Exps.prototype.Minutes = function (ret, timestamp)
+	{
+	    ret.set_int(getDate(timestamp).getMinutes());
+	};
+	Exps.prototype.Seconds = function (ret, timestamp)
+	{
+	    ret.set_int(getDate(timestamp).getSeconds());
+	};
+	Exps.prototype.Milliseconds = function (ret, timestamp)
+	{
+	    ret.set_int(getDate(timestamp).getMilliseconds());
+	};
+	Exps.prototype.Timer = function (ret, name)
+	{
+		ret.set_float(getElapsedTime(this.timers[name])/1000);
+	};
+	Exps.prototype.CurTicks = function (ret)
+	{
+	    var today = new Date();
+        ret.set_int(today.getTime());
+	};
+	Exps.prototype.UnixTimestamp = function (ret, year, month, day, hours, minutes, seconds, milliseconds)
+	{
+        var d;
+        if (year == null)
+        {
+            d = new Date();
+        }
+        else
+        {
+            month = month || 1;
+            day = day || 1;
+            hours = hours || 0;
+            minutes = minutes || 0;
+            seconds = seconds || 0;
+            milliseconds = milliseconds || 0;
+            d = new Date(year, month-1, day, hours, minutes, seconds, milliseconds);
+        }
+        ret.set_float(d.getTime());
+	};
+	Exps.prototype.Date2UnixTimestamp = function (ret, year, month, day, hours, minutes, seconds, milliseconds)
+	{
+        year = year || 2000;
+        month = month || 1;
+        day = day || 1;
+        hours = hours || 0;
+        minutes = minutes || 0;
+        seconds = seconds || 0;
+        milliseconds = milliseconds || 0;
+        var timestamp = new Date(year, month-1, day, hours, minutes, seconds, milliseconds); // build Date object
+        ret.set_float(timestamp.getTime());
+	};
+    Exps.prototype.LocalExpression = function (ret, timestamp, locales)
+	{
+	    ret.set_string( getDate(timestamp).toLocaleString(locales) );
 	};
 }());
 ;
@@ -24313,6 +25404,318 @@ cr.plugins_.Sprite = function(runtime)
 }());
 ;
 ;
+cr.plugins_.TextBox = function(runtime)
+{
+	this.runtime = runtime;
+};
+(function ()
+{
+	var pluginProto = cr.plugins_.TextBox.prototype;
+	pluginProto.Type = function(plugin)
+	{
+		this.plugin = plugin;
+		this.runtime = plugin.runtime;
+	};
+	var typeProto = pluginProto.Type.prototype;
+	typeProto.onCreate = function()
+	{
+	};
+	pluginProto.Instance = function(type)
+	{
+		this.type = type;
+		this.runtime = type.runtime;
+	};
+	var instanceProto = pluginProto.Instance.prototype;
+	var elemTypes = ["text", "password", "email", "number", "tel", "url"];
+	if (navigator.userAgent.indexOf("MSIE 9") > -1)
+	{
+		elemTypes[2] = "text";
+		elemTypes[3] = "text";
+		elemTypes[4] = "text";
+		elemTypes[5] = "text";
+	}
+	instanceProto.onCreate = function()
+	{
+		if (this.runtime.isDomFree)
+		{
+			cr.logexport("[Construct 2] Textbox plugin not supported on this platform - the object will not be created");
+			return;
+		}
+		if (this.properties[7] === 6)	// textarea
+		{
+			this.elem = document.createElement("textarea");
+			jQuery(this.elem).css("resize", "none");
+		}
+		else
+		{
+			this.elem = document.createElement("input");
+			this.elem.type = elemTypes[this.properties[7]];
+		}
+		this.elem.id = this.properties[9];
+		jQuery(this.elem).appendTo(this.runtime.canvasdiv ? this.runtime.canvasdiv : "body");
+		this.elem["autocomplete"] = "off";
+		this.elem.value = this.properties[0];
+		this.elem["placeholder"] = this.properties[1];
+		this.elem.title = this.properties[2];
+		this.elem.disabled = (this.properties[4] === 0);
+		this.elem["readOnly"] = (this.properties[5] === 1);
+		this.elem["spellcheck"] = (this.properties[6] === 1);
+		this.autoFontSize = (this.properties[8] !== 0);
+		this.element_hidden = false;
+		if (this.properties[3] === 0)
+		{
+			jQuery(this.elem).hide();
+			this.visible = false;
+			this.element_hidden = true;
+		}
+		var onchangetrigger = (function (self) {
+			return function() {
+				self.runtime.trigger(cr.plugins_.TextBox.prototype.cnds.OnTextChanged, self);
+			};
+		})(this);
+		this.elem["oninput"] = onchangetrigger;
+		if (navigator.userAgent.indexOf("MSIE") !== -1)
+			this.elem["oncut"] = onchangetrigger;
+		this.elem.onclick = (function (self) {
+			return function(e) {
+				e.stopPropagation();
+				self.runtime.isInUserInputEvent = true;
+				self.runtime.trigger(cr.plugins_.TextBox.prototype.cnds.OnClicked, self);
+				self.runtime.isInUserInputEvent = false;
+			};
+		})(this);
+		this.elem.ondblclick = (function (self) {
+			return function(e) {
+				e.stopPropagation();
+				self.runtime.isInUserInputEvent = true;
+				self.runtime.trigger(cr.plugins_.TextBox.prototype.cnds.OnDoubleClicked, self);
+				self.runtime.isInUserInputEvent = false;
+			};
+		})(this);
+		this.elem.addEventListener("touchstart", function (e) {
+			e.stopPropagation();
+		}, false);
+		this.elem.addEventListener("touchmove", function (e) {
+			e.stopPropagation();
+		}, false);
+		this.elem.addEventListener("touchend", function (e) {
+			e.stopPropagation();
+		}, false);
+		jQuery(this.elem).mousedown(function (e) {
+			e.stopPropagation();
+		});
+		jQuery(this.elem).mouseup(function (e) {
+			e.stopPropagation();
+		});
+		jQuery(this.elem).keydown(function (e) {
+			if (e.which !== 13 && e.which != 27)	// allow enter and escape
+				e.stopPropagation();
+		});
+		jQuery(this.elem).keyup(function (e) {
+			if (e.which !== 13 && e.which != 27)	// allow enter and escape
+				e.stopPropagation();
+		});
+		this.lastLeft = 0;
+		this.lastTop = 0;
+		this.lastRight = 0;
+		this.lastBottom = 0;
+		this.lastWinWidth = 0;
+		this.lastWinHeight = 0;
+		this.updatePosition(true);
+		this.runtime.tickMe(this);
+	};
+	instanceProto.saveToJSON = function ()
+	{
+		return {
+			"text": this.elem.value,
+			"placeholder": this.elem.placeholder,
+			"tooltip": this.elem.title,
+			"disabled": !!this.elem.disabled,
+			"readonly": !!this.elem.readOnly,
+			"spellcheck": !!this.elem["spellcheck"]
+		};
+	};
+	instanceProto.loadFromJSON = function (o)
+	{
+		this.elem.value = o["text"];
+		this.elem.placeholder = o["placeholder"];
+		this.elem.title = o["tooltip"];
+		this.elem.disabled = o["disabled"];
+		this.elem.readOnly = o["readonly"];
+		this.elem["spellcheck"] = o["spellcheck"];
+	};
+	instanceProto.onDestroy = function ()
+	{
+		if (this.runtime.isDomFree)
+				return;
+		jQuery(this.elem).remove();
+		this.elem = null;
+	};
+	instanceProto.tick = function ()
+	{
+		this.updatePosition();
+	};
+	instanceProto.updatePosition = function (first)
+	{
+		if (this.runtime.isDomFree)
+			return;
+		var left = this.layer.layerToCanvas(this.x, this.y, true);
+		var top = this.layer.layerToCanvas(this.x, this.y, false);
+		var right = this.layer.layerToCanvas(this.x + this.width, this.y + this.height, true);
+		var bottom = this.layer.layerToCanvas(this.x + this.width, this.y + this.height, false);
+		var rightEdge = this.runtime.width / this.runtime.devicePixelRatio;
+		var bottomEdge = this.runtime.height / this.runtime.devicePixelRatio;
+		if (!this.visible || !this.layer.visible || right <= 0 || bottom <= 0 || left >= rightEdge || top >= bottomEdge)
+		{
+			if (!this.element_hidden)
+				jQuery(this.elem).hide();
+			this.element_hidden = true;
+			return;
+		}
+		if (left < 1)
+			left = 1;
+		if (top < 1)
+			top = 1;
+		if (right >= rightEdge)
+			right = rightEdge - 1;
+		if (bottom >= bottomEdge)
+			bottom = bottomEdge - 1;
+		var curWinWidth = window.innerWidth;
+		var curWinHeight = window.innerHeight;
+		if (!first && this.lastLeft === left && this.lastTop === top && this.lastRight === right && this.lastBottom === bottom && this.lastWinWidth === curWinWidth && this.lastWinHeight === curWinHeight)
+		{
+			if (this.element_hidden)
+			{
+				jQuery(this.elem).show();
+				this.element_hidden = false;
+			}
+			return;
+		}
+		this.lastLeft = left;
+		this.lastTop = top;
+		this.lastRight = right;
+		this.lastBottom = bottom;
+		this.lastWinWidth = curWinWidth;
+		this.lastWinHeight = curWinHeight;
+		if (this.element_hidden)
+		{
+			jQuery(this.elem).show();
+			this.element_hidden = false;
+		}
+		var offx = Math.round(left) + jQuery(this.runtime.canvas).offset().left;
+		var offy = Math.round(top) + jQuery(this.runtime.canvas).offset().top;
+		jQuery(this.elem).css("position", "absolute");
+		jQuery(this.elem).offset({left: offx, top: offy});
+		jQuery(this.elem).width(Math.round(right - left));
+		jQuery(this.elem).height(Math.round(bottom - top));
+		if (this.autoFontSize)
+			jQuery(this.elem).css("font-size", ((this.layer.getScale(true) / this.runtime.devicePixelRatio) - 0.2) + "em");
+	};
+	instanceProto.draw = function(ctx)
+	{
+	};
+	instanceProto.drawGL = function(glw)
+	{
+	};
+	function Cnds() {};
+	Cnds.prototype.CompareText = function (text, case_)
+	{
+		if (this.runtime.isDomFree)
+			return false;
+		if (case_ === 0)	// insensitive
+			return cr.equals_nocase(this.elem.value, text);
+		else
+			return this.elem.value === text;
+	};
+	Cnds.prototype.OnTextChanged = function ()
+	{
+		return true;
+	};
+	Cnds.prototype.OnClicked = function ()
+	{
+		return true;
+	};
+	Cnds.prototype.OnDoubleClicked = function ()
+	{
+		return true;
+	};
+	pluginProto.cnds = new Cnds();
+	function Acts() {};
+	Acts.prototype.SetText = function (text)
+	{
+		if (this.runtime.isDomFree)
+			return;
+		this.elem.value = text;
+	};
+	Acts.prototype.SetPlaceholder = function (text)
+	{
+		if (this.runtime.isDomFree)
+			return;
+		this.elem.placeholder = text;
+	};
+	Acts.prototype.SetTooltip = function (text)
+	{
+		if (this.runtime.isDomFree)
+			return;
+		this.elem.title = text;
+	};
+	Acts.prototype.SetVisible = function (vis)
+	{
+		if (this.runtime.isDomFree)
+			return;
+		this.visible = (vis !== 0);
+	};
+	Acts.prototype.SetEnabled = function (en)
+	{
+		if (this.runtime.isDomFree)
+			return;
+		this.elem.disabled = (en === 0);
+	};
+	Acts.prototype.SetReadOnly = function (ro)
+	{
+		if (this.runtime.isDomFree)
+			return;
+		this.elem.readOnly = (ro === 0);
+	};
+	Acts.prototype.SetFocus = function ()
+	{
+		if (this.runtime.isDomFree)
+			return;
+		this.elem.focus();
+	};
+	Acts.prototype.SetBlur = function ()
+	{
+		if (this.runtime.isDomFree)
+			return;
+		this.elem.blur();
+	};
+	Acts.prototype.SetCSSStyle = function (p, v)
+	{
+		if (this.runtime.isDomFree)
+			return;
+		jQuery(this.elem).css(p, v);
+	};
+	Acts.prototype.ScrollToBottom = function ()
+	{
+		if (this.runtime.isDomFree)
+			return;
+		this.elem.scrollTop = this.elem.scrollHeight;
+	};
+	pluginProto.acts = new Acts();
+	function Exps() {};
+	Exps.prototype.Text = function (ret)
+	{
+		if (this.runtime.isDomFree)
+		{
+			ret.set_string("");
+			return;
+		}
+		ret.set_string(this.elem.value);
+	};
+	pluginProto.exps = new Exps();
+}());
+;
+;
 cr.plugins_.WebStorage = function(runtime)
 {
 	this.runtime = runtime;
@@ -27651,6 +29054,204 @@ cr.plugins_.rex_TouchWrap = function(runtime)
     {
         return this.cursor.y;
     };
+}());
+;
+;
+cr.behaviors.Fade = function(runtime)
+{
+	this.runtime = runtime;
+};
+(function ()
+{
+	var behaviorProto = cr.behaviors.Fade.prototype;
+	behaviorProto.Type = function(behavior, objtype)
+	{
+		this.behavior = behavior;
+		this.objtype = objtype;
+		this.runtime = behavior.runtime;
+	};
+	var behtypeProto = behaviorProto.Type.prototype;
+	behtypeProto.onCreate = function()
+	{
+	};
+	behaviorProto.Instance = function(type, inst)
+	{
+		this.type = type;
+		this.behavior = type.behavior;
+		this.inst = inst;				// associated object instance to modify
+		this.runtime = type.runtime;
+	};
+	var behinstProto = behaviorProto.Instance.prototype;
+	behinstProto.onCreate = function()
+	{
+		this.activeAtStart = this.properties[0] === 1;
+		this.setMaxOpacity = false;					// used to retrieve maxOpacity once in first 'Start fade' action if initially inactive
+		this.fadeInTime = this.properties[1];
+		this.waitTime = this.properties[2];
+		this.fadeOutTime = this.properties[3];
+		this.destroy = this.properties[4];			// 0 = no, 1 = after fade out
+		this.stage = this.activeAtStart ? 0 : 3;		// 0 = fade in, 1 = wait, 2 = fade out, 3 = done
+		if (this.recycled)
+			this.stageTime.reset();
+		else
+			this.stageTime = new cr.KahanAdder();
+		this.maxOpacity = (this.inst.opacity ? this.inst.opacity : 1.0);
+		if (this.activeAtStart)
+		{
+			if (this.fadeInTime === 0)
+			{
+				this.stage = 1;
+				if (this.waitTime === 0)
+					this.stage = 2;
+			}
+			else
+			{
+				this.inst.opacity = 0;
+				this.runtime.redraw = true;
+			}
+		}
+	};
+	behinstProto.saveToJSON = function ()
+	{
+		return {
+			"fit": this.fadeInTime,
+			"wt": this.waitTime,
+			"fot": this.fadeOutTime,
+			"s": this.stage,
+			"st": this.stageTime.sum,
+			"mo": this.maxOpacity,
+		};
+	};
+	behinstProto.loadFromJSON = function (o)
+	{
+		this.fadeInTime = o["fit"];
+		this.waitTime = o["wt"];
+		this.fadeOutTime = o["fot"];
+		this.stage = o["s"];
+		this.stageTime.reset();
+		this.stageTime.sum = o["st"];
+		this.maxOpacity = o["mo"];
+	};
+	behinstProto.tick = function ()
+	{
+		this.stageTime.add(this.runtime.getDt(this.inst));
+		if (this.stage === 0)
+		{
+			this.inst.opacity = (this.stageTime.sum / this.fadeInTime) * this.maxOpacity;
+			this.runtime.redraw = true;
+			if (this.inst.opacity >= this.maxOpacity)
+			{
+				this.inst.opacity = this.maxOpacity;
+				this.stage = 1;	// wait stage
+				this.stageTime.reset();
+				this.runtime.trigger(cr.behaviors.Fade.prototype.cnds.OnFadeInEnd, this.inst);
+			}
+		}
+		if (this.stage === 1)
+		{
+			if (this.stageTime.sum >= this.waitTime)
+			{
+				this.stage = 2;	// fade out stage
+				this.stageTime.reset();
+				this.runtime.trigger(cr.behaviors.Fade.prototype.cnds.OnWaitEnd, this.inst);
+			}
+		}
+		if (this.stage === 2)
+		{
+			if (this.fadeOutTime !== 0)
+			{
+				this.inst.opacity = this.maxOpacity - ((this.stageTime.sum / this.fadeOutTime) * this.maxOpacity);
+				this.runtime.redraw = true;
+				if (this.inst.opacity < 0)
+				{
+					this.inst.opacity = 0;
+					this.stage = 3;	// done
+					this.stageTime.reset();
+					this.runtime.trigger(cr.behaviors.Fade.prototype.cnds.OnFadeOutEnd, this.inst);
+					if (this.destroy === 1)
+						this.runtime.DestroyInstance(this.inst);
+				}
+			}
+		}
+	};
+	behinstProto.doStart = function ()
+	{
+		this.stage = 0;
+		this.stageTime.reset();
+		if (this.fadeInTime === 0)
+		{
+			this.stage = 1;
+			if (this.waitTime === 0)
+				this.stage = 2;
+		}
+		else
+		{
+			this.inst.opacity = 0;
+			this.runtime.redraw = true;
+		}
+	};
+	function Cnds() {};
+	Cnds.prototype.OnFadeOutEnd = function ()
+	{
+		return true;
+	};
+	Cnds.prototype.OnFadeInEnd = function ()
+	{
+		return true;
+	};
+	Cnds.prototype.OnWaitEnd = function ()
+	{
+		return true;
+	};
+	behaviorProto.cnds = new Cnds();
+	function Acts() {};
+	Acts.prototype.StartFade = function ()
+	{
+		if (!this.activeAtStart && !this.setMaxOpacity)
+		{
+			this.maxOpacity = (this.inst.opacity ? this.inst.opacity : 1.0);
+			this.setMaxOpacity = true;
+		}
+		if (this.stage === 3)
+			this.doStart();
+	};
+	Acts.prototype.RestartFade = function ()
+	{
+		this.doStart();
+	};
+	Acts.prototype.SetFadeInTime = function (t)
+	{
+		if (t < 0)
+			t = 0;
+		this.fadeInTime = t;
+	};
+	Acts.prototype.SetWaitTime = function (t)
+	{
+		if (t < 0)
+			t = 0;
+		this.waitTime = t;
+	};
+	Acts.prototype.SetFadeOutTime = function (t)
+	{
+		if (t < 0)
+			t = 0;
+		this.fadeOutTime = t;
+	};
+	behaviorProto.acts = new Acts();
+	function Exps() {};
+	Exps.prototype.FadeInTime = function (ret)
+	{
+		ret.set_float(this.fadeInTime);
+	};
+	Exps.prototype.WaitTime = function (ret)
+	{
+		ret.set_float(this.waitTime);
+	};
+	Exps.prototype.FadeOutTime = function (ret)
+	{
+		ret.set_float(this.fadeOutTime);
+	};
+	behaviorProto.exps = new Exps();
 }());
 ;
 ;
@@ -32021,30 +33622,33 @@ cr.behaviors.scrollto = function(runtime)
 	behaviorProto.acts = new Acts();
 }());
 cr.getObjectRefTable = function () { return [
-	cr.plugins_.Rex_fnCallPkg,
-	cr.plugins_.Rex_JSONBuider,
-	cr.plugins_.Rex_Hash,
-	cr.plugins_.Rex_GridCtrl,
-	cr.plugins_.Rex_jsshell,
-	cr.plugins_.Rex_Nickname,
-	cr.plugins_.Rex_PatternGen,
-	cr.plugins_.rex_TagText,
-	cr.plugins_.Rex_Random,
-	cr.plugins_.Rex_SysExt,
-	cr.plugins_.Rex_TimeAway,
-	cr.plugins_.Rex_taffydb,
-	cr.plugins_.rex_TouchWrap,
-	cr.plugins_.Rex_WaitEvent,
-	cr.plugins_.Rex_WebstorageExt,
-	cr.plugins_.Sprite,
-	cr.plugins_.WebStorage,
 	cr.plugins_.NinePatch,
 	cr.plugins_.AJAX,
 	cr.plugins_.Browser,
 	cr.plugins_.Function,
+	cr.plugins_.Rex_CSV,
 	cr.plugins_.Rex_canvas,
+	cr.plugins_.Rex_Date,
 	cr.plugins_.Rex_Comment,
 	cr.plugins_.Rex_Container,
+	cr.plugins_.Rex_fnCallPkg,
+	cr.plugins_.Rex_GridCtrl,
+	cr.plugins_.Rex_Hash,
+	cr.plugins_.Rex_jsshell,
+	cr.plugins_.Rex_JSONBuider,
+	cr.plugins_.Rex_Nickname,
+	cr.plugins_.Rex_SysExt,
+	cr.plugins_.Rex_TimeAway,
+	cr.plugins_.Rex_PatternGen,
+	cr.plugins_.rex_TagText,
+	cr.plugins_.Rex_Random,
+	cr.plugins_.Rex_taffydb,
+	cr.plugins_.Rex_WaitEvent,
+	cr.plugins_.rex_TouchWrap,
+	cr.plugins_.Rex_WebstorageExt,
+	cr.plugins_.TextBox,
+	cr.plugins_.Sprite,
+	cr.plugins_.WebStorage,
 	cr.behaviors.scrollto,
 	cr.behaviors.Rex_boundary,
 	cr.behaviors.Sin,
@@ -32054,51 +33658,49 @@ cr.getObjectRefTable = function () { return [
 	cr.behaviors.Rex_Slowdown,
 	cr.behaviors.Rex_TouchArea2,
 	cr.behaviors.Rex_DragDrop2,
+	cr.behaviors.Fade,
 	cr.behaviors.Rex_Button2,
 	cr.behaviors.rex_Anchor2,
 	cr.behaviors.Rex_bNickname,
 	cr.system_object.prototype.cnds.OnLayoutStart,
 	cr.system_object.prototype.acts.SetVar,
 	cr.plugins_.Function.prototype.acts.CallFunction,
-	cr.plugins_.rex_TouchWrap.prototype.cnds.OnDoubleTapGesture,
+	cr.behaviors.Rex_Button2.prototype.cnds.OnClick,
+	cr.plugins_.Sprite.prototype.cnds.CompareInstanceVar,
+	cr.plugins_.Rex_taffydb.prototype.acts.NewFilters,
+	cr.system_object.prototype.cnds.Compare,
+	cr.plugins_.Rex_taffydb.prototype.exps.AllRowsCount,
+	cr.system_object.prototype.exps["int"],
+	cr.plugins_.Rex_WebstorageExt.prototype.exps.LocalValue,
+	cr.plugins_.WebStorage.prototype.acts.StoreLocal,
+	cr.system_object.prototype.cnds.Else,
 	cr.system_object.prototype.exps.viewportright,
 	cr.system_object.prototype.exps.viewportleft,
-	cr.plugins_.Rex_taffydb.prototype.acts.NewFilters,
 	cr.plugins_.Rex_taffydb.prototype.acts.AddValueComparsion,
 	cr.system_object.prototype.exps.str,
 	cr.plugins_.Rex_taffydb.prototype.cnds.ForEachRow,
 	cr.plugins_.Rex_taffydb.prototype.exps.CurRowContent,
 	cr.system_object.prototype.exps["float"],
-	cr.system_object.prototype.cnds.Compare,
 	cr.plugins_.rex_TagText.prototype.acts.SetText,
 	cr.plugins_.Function.prototype.cnds.OnFunction,
 	cr.system_object.prototype.cnds.ForEach,
-	cr.plugins_.Sprite.prototype.cnds.CompareInstanceVar,
 	cr.system_object.prototype.cnds.CompareVar,
 	cr.plugins_.Rex_fnCallPkg.prototype.acts.CleanFnQueue,
 	cr.plugins_.Rex_fnCallPkg.prototype.acts.PushToFnQueue2,
 	cr.plugins_.Sprite.prototype.acts.SetInstanceVar,
 	cr.plugins_.Rex_fnCallPkg.prototype.exps.FnQueuePkg,
 	cr.plugins_.Sprite.prototype.acts.SetAnim,
-	cr.system_object.prototype.cnds.Else,
 	cr.plugins_.Rex_Container.prototype.cnds.PickByUID,
-	cr.system_object.prototype.exps["int"],
 	cr.plugins_.Function.prototype.exps.Param,
 	cr.plugins_.Sprite.prototype.acts.MoveToTop,
 	cr.plugins_.Browser.prototype.acts.ConsoleLog,
-	cr.behaviors.Rex_Button2.prototype.cnds.OnClick,
-	cr.system_object.prototype.cnds.IsGroupActive,
-	cr.behaviors.Rex_TouchArea2.prototype.exps.Distance,
-	cr.plugins_.Rex_fnCallPkg.prototype.acts.CallFunction,
-	cr.behaviors.Rex_Button2.prototype.cnds.OnRollingIn,
-	cr.plugins_.Sprite.prototype.acts.SetAnimFrame,
-	cr.behaviors.Rex_Button2.prototype.cnds.OnRollingOut,
-	cr.plugins_.WebStorage.prototype.acts.StoreLocal,
 	cr.plugins_.Rex_taffydb.prototype.exps.AllRowsAsJSON,
 	cr.plugins_.Function.prototype.acts.SetReturnValue,
+	cr.plugins_.Rex_Date.prototype.exps.Day,
 	cr.system_object.prototype.acts.GoToLayoutByName,
+	cr.plugins_.Browser.prototype.acts.GoToURLWindow,
+	cr.system_object.prototype.cnds.IsGroupActive,
 	cr.system_object.prototype.exps.floor,
-	cr.plugins_.Rex_WebstorageExt.prototype.exps.LocalValue,
 	cr.plugins_.Rex_taffydb.prototype.acts.SetRowID,
 	cr.plugins_.Rex_taffydb.prototype.exps.CurRowID,
 	cr.plugins_.Rex_taffydb.prototype.acts.SetValue,
@@ -32108,48 +33710,50 @@ cr.getObjectRefTable = function () { return [
 	cr.plugins_.WebStorage.prototype.acts.ClearLocal,
 	cr.plugins_.Rex_taffydb.prototype.acts.RemoveAll,
 	cr.plugins_.rex_TouchWrap.prototype.cnds.OnTapGestureObject,
-	cr.plugins_.Rex_taffydb.prototype.exps.AllRowsCount,
 	cr.plugins_.Rex_taffydb.prototype.exps.Index2QueriedRowContent,
+	cr.plugins_.rex_TouchWrap.prototype.cnds.OnDoubleTapGesture,
+	cr.behaviors.Rex_TouchArea2.prototype.exps.Distance,
+	cr.plugins_.Rex_fnCallPkg.prototype.acts.CallFunction,
+	cr.behaviors.Rex_Button2.prototype.cnds.OnRollingIn,
+	cr.plugins_.Sprite.prototype.acts.SetOpacity,
+	cr.behaviors.Rex_Button2.prototype.cnds.OnRollingOut,
 	cr.plugins_.Rex_taffydb.prototype.exps.QueriedRowsCount,
 	cr.plugins_.Function.prototype.exps.Call,
-	cr.system_object.prototype.exps.layoutname,
-	cr.plugins_.Sprite.prototype.acts.Destroy,
-	cr.plugins_.Rex_taffydb.prototype.acts.RemoveByRowID,
+	cr.plugins_.Rex_taffydb.prototype.acts.RemoveQueriedRows,
 	cr.plugins_.Rex_taffydb.prototype.exps.QueriedRowsAsJSON,
 	cr.plugins_.Rex_Comment.prototype.acts.NOOP,
 	cr.system_object.prototype.acts.GoToLayout,
-	cr.system_object.prototype.exps.newline,
-	cr.plugins_.Rex_jsshell.prototype.acts.LoadAPI,
 	cr.plugins_.Rex_jsshell.prototype.cnds.OnCallback,
-	cr.plugins_.Rex_jsshell.prototype.acts.SetFunctionName,
-	cr.plugins_.Rex_jsshell.prototype.acts.AddValue,
-	cr.plugins_.Rex_jsshell.prototype.acts.InvokeFunction,
-	cr.plugins_.Rex_jsshell.prototype.acts.SetProp,
-	cr.system_object.prototype.acts.SetGroupActive,
-	cr.plugins_.Browser.prototype.acts.ExecJs,
-	cr.plugins_.Rex_jsshell.prototype.acts.AddCallback,
-	cr.plugins_.Rex_Hash.prototype.acts.StringToHashTable,
 	cr.plugins_.Rex_jsshell.prototype.exps.Param,
+	cr.plugins_.Rex_Hash.prototype.acts.StringToHashTable,
 	cr.plugins_.Rex_Hash.prototype.exps.At,
-	cr.plugins_.Rex_Hash.prototype.cnds.ForEachItem,
-	cr.plugins_.Rex_Hash.prototype.exps.CurValue,
 	cr.plugins_.Rex_Hash.prototype.exps.RandomKeyAt,
+	cr.plugins_.Rex_Hash.prototype.cnds.ForEachItem,
 	cr.plugins_.Rex_Hash.prototype.exps.CurKey,
+	cr.plugins_.Rex_Hash.prototype.exps.CurValue,
 	cr.system_object.prototype.cnds.IsMobile,
 	cr.plugins_.WebStorage.prototype.cnds.LocalStorageExists,
 	cr.plugins_.WebStorage.prototype.exps.LocalValue,
 	cr.plugins_.Rex_jsshell.prototype.exps.Prop,
+	cr.system_object.prototype.exps.newline,
+	cr.plugins_.Rex_jsshell.prototype.acts.SetFunctionName,
+	cr.plugins_.Rex_jsshell.prototype.acts.AddValue,
+	cr.plugins_.Rex_jsshell.prototype.acts.AddCallback,
+	cr.plugins_.Rex_jsshell.prototype.acts.InvokeFunction,
 	cr.plugins_.Rex_Hash.prototype.acts.CleanAll,
 	cr.plugins_.Rex_Hash.prototype.acts.InsertValue,
 	cr.plugins_.Rex_Hash.prototype.exps.AtKeys,
 	cr.plugins_.Rex_jsshell.prototype.acts.AddJSON,
+	cr.plugins_.Sprite.prototype.acts.SetAnimFrame,
+	cr.plugins_.Sprite.prototype.acts.Destroy,
+	cr.plugins_.Rex_taffydb.prototype.acts.RemoveByRowID,
 	cr.plugins_.Rex_JSONBuider.prototype.acts.Clean,
 	cr.plugins_.Rex_JSONBuider.prototype.cnds.SetRoot,
 	cr.plugins_.Rex_JSONBuider.prototype.acts.AddValue,
 	cr.plugins_.Rex_JSONBuider.prototype.exps.AsJSON,
 	cr.plugins_.Rex_JSONBuider.prototype.acts.AddBooleanValue,
 	cr.plugins_.Rex_Hash.prototype.exps.AsJSON,
-	cr.plugins_.Browser.prototype.acts.GoToURLWindow,
+	cr.plugins_.Browser.prototype.acts.ExecJs,
 	cr.plugins_.Rex_jsshell.prototype.acts.AddObject,
 	cr.system_object.prototype.acts.SnapshotCanvas,
 	cr.system_object.prototype.cnds.OnCanvasSnapshot,
@@ -32157,6 +33761,7 @@ cr.getObjectRefTable = function () { return [
 	cr.system_object.prototype.acts.Wait,
 	cr.plugins_.Browser.prototype.cnds.OnBackButton,
 	cr.system_object.prototype.exps.time,
+	cr.system_object.prototype.exps.layoutname,
 	cr.plugins_.Browser.prototype.acts.Close,
 	cr.system_object.prototype.cnds.Every,
 	cr.plugins_.Rex_TimeAway.prototype.exps.ElapsedTime,
@@ -32165,9 +33770,11 @@ cr.getObjectRefTable = function () { return [
 	cr.behaviors.Rex_Button2.prototype.acts.GotoACTIVE,
 	cr.plugins_.Sprite.prototype.acts.SetVisible,
 	cr.behaviors.Rex_Button2.prototype.acts.GotoINACTIVE,
-	cr.plugins_.rex_TagText.prototype.acts.AppendText,
-	cr.plugins_.rex_TagText.prototype.cnds.IsVisible,
-	cr.plugins_.rex_TagText.prototype.acts.SetVisible,
+	cr.plugins_.TextBox.prototype.acts.SetText,
+	cr.plugins_.TextBox.prototype.exps.Text,
+	cr.plugins_.TextBox.prototype.cnds.CompareInstanceVar,
+	cr.plugins_.TextBox.prototype.acts.SetVisible,
+	cr.plugins_.TextBox.prototype.acts.SetInstanceVar,
 	cr.behaviors.Rex_TouchArea2.prototype.cnds.OnTouchMoving,
 	cr.system_object.prototype.acts.AddVar,
 	cr.system_object.prototype.exps.abs,
@@ -32216,7 +33823,6 @@ cr.getObjectRefTable = function () { return [
 	cr.plugins_.Rex_GridCtrl.prototype.exps.ListHeight,
 	cr.behaviors.Rex_TouchArea2.prototype.acts.SetEnabled,
 	cr.plugins_.Sprite.prototype.acts.SetSize,
-	cr.plugins_.Sprite.prototype.acts.SetOpacity,
 	cr.plugins_.Sprite.prototype.exps.X,
 	cr.plugins_.Sprite.prototype.exps.BBoxTop,
 	cr.plugins_.Rex_GridCtrl.prototype.acts.SetColumnNumber,
@@ -32252,5 +33858,11 @@ cr.getObjectRefTable = function () { return [
 	cr.plugins_.Rex_WaitEvent.prototype.acts.EventFinished,
 	cr.system_object.prototype.cnds.OnLoadFinished,
 	cr.plugins_.Rex_WaitEvent.prototype.cnds.OnAllEventsFinished,
-	cr.plugins_.Rex_Nickname.prototype.acts.AssignNickname
+	cr.plugins_.Rex_Nickname.prototype.acts.AssignNickname,
+	cr.plugins_.Rex_CSV.prototype.acts.TurnPage,
+	cr.plugins_.Rex_CSV.prototype.acts.StringToPage,
+	cr.plugins_.Rex_CSV.prototype.exps.TableToCSV,
+	cr.plugins_.Rex_jsshell.prototype.acts.LoadAPI,
+	cr.plugins_.Rex_jsshell.prototype.acts.SetProp,
+	cr.system_object.prototype.acts.SetGroupActive
 ];};
