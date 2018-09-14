@@ -29255,6 +29255,170 @@ cr.behaviors.Fade = function(runtime)
 }());
 ;
 ;
+cr.behaviors.Pin = function(runtime)
+{
+	this.runtime = runtime;
+};
+(function ()
+{
+	var behaviorProto = cr.behaviors.Pin.prototype;
+	behaviorProto.Type = function(behavior, objtype)
+	{
+		this.behavior = behavior;
+		this.objtype = objtype;
+		this.runtime = behavior.runtime;
+	};
+	var behtypeProto = behaviorProto.Type.prototype;
+	behtypeProto.onCreate = function()
+	{
+	};
+	behaviorProto.Instance = function(type, inst)
+	{
+		this.type = type;
+		this.behavior = type.behavior;
+		this.inst = inst;				// associated object instance to modify
+		this.runtime = type.runtime;
+	};
+	var behinstProto = behaviorProto.Instance.prototype;
+	behinstProto.onCreate = function()
+	{
+		this.pinObject = null;
+		this.pinObjectUid = -1;		// for loading
+		this.pinAngle = 0;
+		this.pinDist = 0;
+		this.myStartAngle = 0;
+		this.theirStartAngle = 0;
+		this.lastKnownAngle = 0;
+		this.mode = 0;				// 0 = position & angle; 1 = position; 2 = angle; 3 = rope; 4 = bar
+		var self = this;
+		if (!this.recycled)
+		{
+			this.myDestroyCallback = (function(inst) {
+													self.onInstanceDestroyed(inst);
+												});
+		}
+		this.runtime.addDestroyCallback(this.myDestroyCallback);
+	};
+	behinstProto.saveToJSON = function ()
+	{
+		return {
+			"uid": this.pinObject ? this.pinObject.uid : -1,
+			"pa": this.pinAngle,
+			"pd": this.pinDist,
+			"msa": this.myStartAngle,
+			"tsa": this.theirStartAngle,
+			"lka": this.lastKnownAngle,
+			"m": this.mode
+		};
+	};
+	behinstProto.loadFromJSON = function (o)
+	{
+		this.pinObjectUid = o["uid"];		// wait until afterLoad to look up
+		this.pinAngle = o["pa"];
+		this.pinDist = o["pd"];
+		this.myStartAngle = o["msa"];
+		this.theirStartAngle = o["tsa"];
+		this.lastKnownAngle = o["lka"];
+		this.mode = o["m"];
+	};
+	behinstProto.afterLoad = function ()
+	{
+		if (this.pinObjectUid === -1)
+			this.pinObject = null;
+		else
+		{
+			this.pinObject = this.runtime.getObjectByUID(this.pinObjectUid);
+;
+		}
+		this.pinObjectUid = -1;
+	};
+	behinstProto.onInstanceDestroyed = function (inst)
+	{
+		if (this.pinObject == inst)
+			this.pinObject = null;
+	};
+	behinstProto.onDestroy = function()
+	{
+		this.pinObject = null;
+		this.runtime.removeDestroyCallback(this.myDestroyCallback);
+	};
+	behinstProto.tick = function ()
+	{
+	};
+	behinstProto.tick2 = function ()
+	{
+		if (!this.pinObject)
+			return;
+		if (this.lastKnownAngle !== this.inst.angle)
+			this.myStartAngle = cr.clamp_angle(this.myStartAngle + (this.inst.angle - this.lastKnownAngle));
+		var newx = this.inst.x;
+		var newy = this.inst.y;
+		if (this.mode === 3 || this.mode === 4)		// rope mode or bar mode
+		{
+			var dist = cr.distanceTo(this.inst.x, this.inst.y, this.pinObject.x, this.pinObject.y);
+			if ((dist > this.pinDist) || (this.mode === 4 && dist < this.pinDist))
+			{
+				var a = cr.angleTo(this.pinObject.x, this.pinObject.y, this.inst.x, this.inst.y);
+				newx = this.pinObject.x + Math.cos(a) * this.pinDist;
+				newy = this.pinObject.y + Math.sin(a) * this.pinDist;
+			}
+		}
+		else
+		{
+			newx = this.pinObject.x + Math.cos(this.pinObject.angle + this.pinAngle) * this.pinDist;
+			newy = this.pinObject.y + Math.sin(this.pinObject.angle + this.pinAngle) * this.pinDist;
+		}
+		var newangle = cr.clamp_angle(this.myStartAngle + (this.pinObject.angle - this.theirStartAngle));
+		this.lastKnownAngle = newangle;
+		if ((this.mode === 0 || this.mode === 1 || this.mode === 3 || this.mode === 4)
+			&& (this.inst.x !== newx || this.inst.y !== newy))
+		{
+			this.inst.x = newx;
+			this.inst.y = newy;
+			this.inst.set_bbox_changed();
+		}
+		if ((this.mode === 0 || this.mode === 2) && (this.inst.angle !== newangle))
+		{
+			this.inst.angle = newangle;
+			this.inst.set_bbox_changed();
+		}
+	};
+	function Cnds() {};
+	Cnds.prototype.IsPinned = function ()
+	{
+		return !!this.pinObject;
+	};
+	behaviorProto.cnds = new Cnds();
+	function Acts() {};
+	Acts.prototype.Pin = function (obj, mode_)
+	{
+		if (!obj)
+			return;
+		var otherinst = obj.getFirstPicked(this.inst);
+		if (!otherinst)
+			return;
+		this.pinObject = otherinst;
+		this.pinAngle = cr.angleTo(otherinst.x, otherinst.y, this.inst.x, this.inst.y) - otherinst.angle;
+		this.pinDist = cr.distanceTo(otherinst.x, otherinst.y, this.inst.x, this.inst.y);
+		this.myStartAngle = this.inst.angle;
+		this.lastKnownAngle = this.inst.angle;
+		this.theirStartAngle = otherinst.angle;
+		this.mode = mode_;
+	};
+	Acts.prototype.Unpin = function ()
+	{
+		this.pinObject = null;
+	};
+	behaviorProto.acts = new Acts();
+	function Exps() {};
+	Exps.prototype.PinnedUID = function (ret)
+	{
+		ret.set_int(this.pinObject ? this.pinObject.uid : -1);
+	};
+	behaviorProto.exps = new Exps();
+}());
+;
+;
 cr.behaviors.Rex_Button2 = function(runtime)
 {
 	this.runtime = runtime;
@@ -33626,26 +33790,26 @@ cr.getObjectRefTable = function () { return [
 	cr.plugins_.AJAX,
 	cr.plugins_.Browser,
 	cr.plugins_.Function,
-	cr.plugins_.Rex_Comment,
 	cr.plugins_.Rex_Container,
-	cr.plugins_.Rex_CSV,
-	cr.plugins_.Rex_Date,
 	cr.plugins_.Rex_canvas,
+	cr.plugins_.Rex_Date,
+	cr.plugins_.Rex_CSV,
+	cr.plugins_.Rex_Comment,
 	cr.plugins_.Rex_fnCallPkg,
-	cr.plugins_.Rex_JSONBuider,
-	cr.plugins_.Rex_Hash,
 	cr.plugins_.Rex_GridCtrl,
 	cr.plugins_.Rex_jsshell,
+	cr.plugins_.Rex_Hash,
+	cr.plugins_.Rex_JSONBuider,
 	cr.plugins_.Rex_Nickname,
-	cr.plugins_.rex_TagText,
-	cr.plugins_.Rex_PatternGen,
+	cr.plugins_.Rex_TimeAway,
 	cr.plugins_.Rex_Random,
+	cr.plugins_.Rex_PatternGen,
+	cr.plugins_.rex_TagText,
 	cr.plugins_.Rex_taffydb,
 	cr.plugins_.Rex_SysExt,
+	cr.plugins_.rex_TouchWrap,
 	cr.plugins_.Rex_WaitEvent,
 	cr.plugins_.Rex_WebstorageExt,
-	cr.plugins_.Rex_TimeAway,
-	cr.plugins_.rex_TouchWrap,
 	cr.plugins_.TextBox,
 	cr.plugins_.Sprite,
 	cr.plugins_.WebStorage,
@@ -33659,11 +33823,17 @@ cr.getObjectRefTable = function () { return [
 	cr.behaviors.Rex_TouchArea2,
 	cr.behaviors.Rex_DragDrop2,
 	cr.behaviors.Fade,
+	cr.behaviors.Pin,
 	cr.behaviors.Rex_Button2,
 	cr.behaviors.rex_Anchor2,
 	cr.behaviors.Rex_bNickname,
 	cr.system_object.prototype.cnds.OnLayoutStart,
 	cr.system_object.prototype.acts.SetVar,
+	cr.plugins_.Sprite.prototype.acts.SetSize,
+	cr.system_object.prototype.exps.viewportright,
+	cr.system_object.prototype.exps.viewportleft,
+	cr.system_object.prototype.exps.viewportbottom,
+	cr.system_object.prototype.exps.viewporttop,
 	cr.plugins_.Function.prototype.acts.CallFunction,
 	cr.behaviors.Rex_Button2.prototype.cnds.OnClick,
 	cr.plugins_.Sprite.prototype.cnds.CompareInstanceVar,
@@ -33675,9 +33845,6 @@ cr.getObjectRefTable = function () { return [
 	cr.plugins_.WebStorage.prototype.acts.StoreLocal,
 	cr.system_object.prototype.cnds.Else,
 	cr.behaviors.rex_Anchor_mod.prototype.cnds.OnAnchored,
-	cr.system_object.prototype.exps.viewportright,
-	cr.system_object.prototype.exps.viewportleft,
-	cr.plugins_.Sprite.prototype.acts.SetSize,
 	cr.plugins_.Rex_taffydb.prototype.acts.AddValueComparsion,
 	cr.system_object.prototype.exps.str,
 	cr.plugins_.Rex_taffydb.prototype.cnds.ForEachRow,
@@ -33724,18 +33891,19 @@ cr.getObjectRefTable = function () { return [
 	cr.behaviors.rex_lunarray_Tween_mod.prototype.acts.Force,
 	cr.plugins_.Rex_taffydb.prototype.exps.QueriedRowsCount,
 	cr.plugins_.Function.prototype.exps.Call,
-	cr.plugins_.Rex_taffydb.prototype.acts.RemoveQueriedRows,
 	cr.plugins_.Rex_taffydb.prototype.exps.QueriedRowsAsJSON,
 	cr.plugins_.Rex_Comment.prototype.acts.NOOP,
 	cr.system_object.prototype.acts.GoToLayout,
-	cr.plugins_.Rex_jsshell.prototype.cnds.OnCallback,
-	cr.plugins_.Rex_jsshell.prototype.exps.Param,
+	cr.plugins_.Rex_taffydb.prototype.exps.ID2RowContent,
 	cr.plugins_.Rex_Hash.prototype.acts.StringToHashTable,
 	cr.plugins_.Rex_Hash.prototype.exps.At,
-	cr.plugins_.Rex_Hash.prototype.exps.RandomKeyAt,
 	cr.plugins_.Rex_Hash.prototype.cnds.ForEachItem,
 	cr.plugins_.Rex_Hash.prototype.exps.CurKey,
 	cr.plugins_.Rex_Hash.prototype.exps.CurValue,
+	cr.plugins_.Rex_jsshell.prototype.cnds.OnCallback,
+	cr.plugins_.Rex_jsshell.prototype.exps.Param,
+	cr.plugins_.Rex_Hash.prototype.exps.RandomKeyAt,
+	cr.system_object.prototype.exps.random,
 	cr.system_object.prototype.cnds.IsMobile,
 	cr.plugins_.WebStorage.prototype.cnds.LocalStorageExists,
 	cr.plugins_.WebStorage.prototype.exps.LocalValue,
@@ -33745,6 +33913,7 @@ cr.getObjectRefTable = function () { return [
 	cr.plugins_.Rex_jsshell.prototype.acts.AddValue,
 	cr.plugins_.Rex_jsshell.prototype.acts.AddCallback,
 	cr.plugins_.Rex_jsshell.prototype.acts.InvokeFunction,
+	cr.plugins_.Function.prototype.cnds.CompareParam,
 	cr.plugins_.Rex_Hash.prototype.acts.CleanAll,
 	cr.plugins_.Rex_Hash.prototype.acts.InsertValue,
 	cr.plugins_.Rex_Hash.prototype.exps.AtKeys,
@@ -33795,7 +33964,6 @@ cr.getObjectRefTable = function () { return [
 	cr.plugins_.Rex_Container.prototype.exps.X,
 	cr.plugins_.Rex_Container.prototype.exps.Y,
 	cr.plugins_.Rex_Container.prototype.acts.AddInsts,
-	cr.plugins_.Sprite.prototype.acts.SetEffect,
 	cr.plugins_.Sprite.prototype.exps.LayerName,
 	cr.plugins_.Sprite.prototype.exps.Y,
 	cr.plugins_.Sprite.prototype.acts.SetHeight,
@@ -33852,6 +34020,8 @@ cr.getObjectRefTable = function () { return [
 	cr.plugins_.Rex_GridCtrl.prototype.cnds.OnCellInvisible,
 	cr.plugins_.Rex_Container.prototype.cnds.CompareInstanceVar,
 	cr.plugins_.Rex_Container.prototype.acts.Destroy,
+	cr.plugins_.Rex_taffydb.prototype.acts.AddOrder,
+	cr.plugins_.Rex_taffydb.prototype.exps.Index2QueriedRowID,
 	cr.system_object.prototype.exps.projectversion,
 	cr.plugins_.Rex_taffydb.prototype.acts.InsertJSON,
 	cr.plugins_.Rex_WaitEvent.prototype.acts.WaitEvent,
