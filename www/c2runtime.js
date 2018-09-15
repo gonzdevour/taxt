@@ -33886,7 +33886,6 @@ cr.getObjectRefTable = function () { return [
 	cr.behaviors.Rex_TouchArea2.prototype.exps.DeltaX,
 	cr.behaviors.Rex_TouchArea2.prototype.exps.DeltaY,
 	cr.behaviors.Rex_TouchArea2.prototype.cnds.OnTouchEnd,
-	cr.plugins_.rex_TouchWrap.prototype.cnds.OnTapGestureObject,
 	cr.plugins_.Rex_taffydb.prototype.exps.Index2QueriedRowContent,
 	cr.plugins_.TextBox.prototype.acts.SetText,
 	cr.plugins_.TextBox.prototype.exps.Text,
