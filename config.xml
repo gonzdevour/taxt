@@ -79,7 +79,7 @@
 	
 	<!-- Permission Description -->	
 	<edit-config target="NSCameraUsageDescription" file="*-Info.plist" mode="merge">
-    <string>need camera access to take pictures</string>
+    <string>need camera access to scan lightcode</string>
 	</edit-config>
 	
 	<edit-config target="NSPhotoLibraryUsageDescription" file="*-Info.plist" mode="merge">
